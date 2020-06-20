@@ -40,11 +40,11 @@ namespace Harmony
 			}
 		 * 
 		 */
-		public static DynamicMethod CreateDynamicMethod(MethodBase original, string suffix)
+		public static DynamicMethod CreateDynamicMethod(MethodBase original, string patchName)
 		{
 			if (original == null) throw new ArgumentNullException("original cannot be null");
-			var patchName = original.Name + suffix;
-			patchName = patchName.Replace("<>", "");
+			//var patchName = original.Name + suffix;
+			//patchName = patchName.Replace("<>", "");
 
 			var parameters = original.GetParameters();
 			var result = parameters.Types().ToList();

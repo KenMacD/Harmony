@@ -31,14 +31,14 @@ namespace Harmony
 			return CreatePatchedMethod(original, "HARMONY_PATCH_1.1.1", prefixes, postfixes, transpilers);
 		}
 
-		public static DynamicMethod CreatePatchedMethod(MethodBase original, string harmonyInstanceID, List<MethodInfo> prefixes, List<MethodInfo> postfixes, List<MethodInfo> transpilers)
+		public static DynamicMethod CreatePatchedMethod(MethodBase original, string harmonyInstanceID, List<MethodInfo> prefixes, List<MethodInfo> postfixes, List<MethodInfo> transpilers, PatchInfo patchInfo = null)
 		{
 			try
 			{
 				if (HarmonyInstance.DEBUG) FileLog.LogBuffered("### Patch " + original.DeclaringType + ", " + original);
 
 				var idx = prefixes.Count() + postfixes.Count();
-				var patch = DynamicTools.CreateDynamicMethod(original, "_Patch" + idx);
+				var patch = DynamicTools.CreateDynamicMethod(original, GetDynamicMethodName(original, patchInfo, idx)); // var patch = DynamicTools.CreateDynamicMethod(original, "_Patch" + idx);
 				if (patch == null)
 					return null;
 
@@ -126,6 +126,33 @@ namespace Harmony
 				if (HarmonyInstance.DEBUG)
 					FileLog.FlushBuffer();
 			}
+		}
+
+		private static string GetDynamicMethodName(MethodBase original, PatchInfo patchInfo, int idx)
+		{
+			string methodName = $"{original.DeclaringType?.FullName}.{original.Name}";
+
+			if (patchInfo != null)
+			{
+				string[] owners = (patchInfo.prefixes.Concat(patchInfo.postfixes).Concat(patchInfo.transpilers))
+					.Select(p => p.owner?.Trim())
+					.Where(p => !string.IsNullOrEmpty(p))
+					.Distinct()
+					.OrderBy(p => p)
+					.ToArray();
+
+				// with patcher list
+				string suffix = "_PatchedBy<" + string.Join("__", owners) + ">";
+				if (owners.Length > 0 && suffix.Length <= 500)
+					return methodName + suffix;
+
+				// with patcher count
+				if (owners.Length > 0)
+					return methodName + $"_PatchedBy<{owners.Length}_mods>";
+			}
+
+			// default suffix
+			return methodName + $"_Patch{idx}";
 		}
 
 		static OpCode LoadIndOpCodeFor(Type type)
