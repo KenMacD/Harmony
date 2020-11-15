@@ -72,23 +72,41 @@ namespace Harmony.ILCopying
 		{
 			UnprotectMemoryPage(memory);
 
-			if (IntPtr.Size == sizeof(long))
-			{
-				if (CompareBytes(memory, new byte[] { 0xe9 }))
-				{
-					var offset = ReadInt(memory + 1);
-					memory += 5 + offset;
-				}
+			if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64) {
+				// LDR X15, .+8
+				memory = WriteByte(memory, (byte) 0x4F);
+				memory = WriteByte(memory, (byte) 0x00);
+				memory = WriteByte(memory, (byte) 0x00);
+				memory = WriteByte(memory, (byte) 0x58);
 
-				memory = WriteBytes(memory, new byte[] { 0x48, 0xB8 });
+				// BR X15
+				memory = WriteByte(memory, (byte) 0xE0);
+				memory = WriteByte(memory, (byte) 0x01);
+				memory = WriteByte(memory, (byte) 0x1F);
+				memory = WriteByte(memory, (byte) 0xD6);
+
+				// .+8
 				memory = WriteLong(memory, destination);
-				memory = WriteBytes(memory, new byte[] { 0xFF, 0xE0 });
-			}
-			else
-			{
-				memory = WriteByte(memory, 0x68);
-				memory = WriteInt(memory, (int)destination);
-				memory = WriteByte(memory, 0xc3);
+			} else {
+
+				if (IntPtr.Size == sizeof(long))
+				{
+					if (CompareBytes(memory, new byte[] { 0xe9 }))
+					{
+						var offset = ReadInt(memory + 1);
+						memory += 5 + offset;
+					}
+
+					memory = WriteBytes(memory, new byte[] { 0x48, 0xB8 });
+					memory = WriteLong(memory, destination);
+					memory = WriteBytes(memory, new byte[] { 0xFF, 0xE0 });
+				}
+				else
+				{
+					memory = WriteByte(memory, 0x68);
+					memory = WriteInt(memory, (int)destination);
+					memory = WriteByte(memory, 0xc3);
+				}
 			}
 			return null;
 		}
